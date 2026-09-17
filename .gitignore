@@ -1,0 +1,6 @@
+*.nc
+*.tab
+*.mat
+*.las
+__pycache__/
+*.pyc
