@@ -1,12 +1,13 @@
 # Vaucottes Radar & Lidar Showcase
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22813736.svg)](https://doi.org/10.5281/zenodo.22813736)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.22813735.svg)](https://doi.org/10.5281/zenodo.22813735)
 
 Quick-look visualization scripts (MATLAB and Python) for the dataset *Synchronised X-band
 marine radar sea clutter and UAV lidar sea surface elevation measurements at Vaucottes
 (Normandy, France) on 6 and 7 May 2025* (19 acquisitions: 7 on 6 May, 12 on 7 May).
 
-This code is archived on Zenodo: https://doi.org/10.5281/zenodo.22813736
+This code is archived on Zenodo: https://doi.org/10.5281/zenodo.22813735 (this DOI always
+resolves to the latest version; each version also has its own DOI on the Zenodo page).
 
 The dataset itself is published on PANGAEA: https://doi.org/10.1594/PANGAEA.997511 (active
 once the DOI is registered).
@@ -65,7 +66,7 @@ is released separately under CC-BY 4.0 on PANGAEA.
 If you use these scripts, please cite:
 
 Barthélémy, R. (2026). vaucottes-radar-lidar-showcase (v1.1.0) [Software]. Zenodo.
-https://doi.org/10.5281/zenodo.22813736
+https://doi.org/10.5281/zenodo.22813735
 
 and the associated PANGAEA dataset:
 
