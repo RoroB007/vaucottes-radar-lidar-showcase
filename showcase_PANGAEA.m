@@ -1,22 +1,25 @@
 
 % Quick-start visualization for the PANGAEA-formatted Vaucottes dataset
-% (PANGAEA_export/*.nc + drone_position.tab). Mirrors the original
+% (19 acquisitions, files AccNN_*.nc + AccNN_drone_position.tab). Mirrors the original
 % Acquisitions/showcase.m, adapted to the NetCDF/TAB files produced by
 % export_pangaea.m. NOT part of the PANGAEA submission itself (PANGAEA
 % does not accept code/software as data files) -- local QA/demo only.
-clc; clear; close all;
+% Acquisition to display: set acq (1-19) before running, e.g.
+% matlab -batch "acq = 3; showcase_PANGAEA"  (default 8).
+clc; clearvars -except acq; close all;
+if ~exist('acq', 'var'); acq = 8; end
 
-disp('Loading Vaucottes PANGAEA-formatted Dataset...');
+fprintf('Loading Vaucottes PANGAEA-formatted Dataset, acquisition %d...\n', acq);
 exportdir = fileparts(mfilename('fullpath'));
 
 %% 1. LOAD DRONE TRAJECTORY (TAB-delimited, absolute UTM31N, unchanged)
-opts = detectImportOptions(fullfile(exportdir, "drone_position.tab"), 'FileType', 'text', 'Delimiter', '\t');
-opts.VariableNames = ["DateTimeUTC", "EastingUTM31N_m", "NorthingUTM31N_m"];
-opts.VariableTypes = ["string", "double", "double"];
-drone_data = readtable(fullfile(exportdir, "drone_position.tab"), opts);
+drone_data = readtable(data_file(exportdir, acq, "drone_position.tab"), 'FileType', 'text', ...
+                       'Delimiter', '\t', 'VariableNamingRule', 'preserve');
+easting = drone_data{:, contains(drone_data.Properties.VariableNames, 'Easting')};
+northing = drone_data{:, contains(drone_data.Properties.VariableNames, 'Northing')};
 
 %% 2. LOAD LIDAR ELEVATION (RADAR-SYNCED, LOCAL/RADAR-CENTERED COORDINATES)
-f_lidar = fullfile(exportdir, "lidar_eta_radar_synced.nc");
+f_lidar = data_file(exportdir, acq, "lidar_eta_radar_synced.nc");
 eta_time = ncread(f_lidar, "time");
 eta_x_extended = ncread(f_lidar, "x_local_ext");
 eta_y_extended = ncread(f_lidar, "y_local_ext");
@@ -26,7 +29,7 @@ eta_y = ncread(f_lidar, "y_local_raw");
 eta_z = ncread(f_lidar, "eta_z");
 
 %% 3. LOAD RADAR SIGNAL (DRONE-MATCHED, LOCAL/RADAR-CENTERED COORDINATES)
-f_raddrone = fullfile(exportdir, "radar_raw_drone.nc");
+f_raddrone = data_file(exportdir, acq, "radar_raw_drone.nc");
 time_unix_raw = ncread(f_raddrone, "time");
 padded_x = ncread(f_raddrone, "x_local");
 padded_y = ncread(f_raddrone, "y_local");
@@ -39,7 +42,7 @@ sig_double(sig_double == 32767) = NaN; % documented missing-value convention (se
 % the original showcase.m; treat with care.
 
 %% 4. LOAD FULL RADAR SNAPSHOT (NATIVE POLAR, RADAR-CENTERED)
-f_snap = fullfile(exportdir, "radar_snap.nc");
+f_snap = data_file(exportdir, acq, "radar_snap.nc");
 radar_snap_time = ncread(f_snap, "time");
 radar_snap_az = ncread(f_snap, "az");
 radar_snap_r = ncread(f_snap, "r");
@@ -55,16 +58,14 @@ Y_snap = R_snap .* sin(AZ_snap);
 %% PLOTTING THE DASHBOARD
 disp('Generating figures...');
 to_paris_str = @(t) char(datetime(t, 'ConvertFrom', 'posixtime', 'TimeZone', 'Europe/Paris', 'Format', 'yyyy-MM-dd HH:mm:ss'));
-figure('Name', 'Vaucottes PANGAEA Dataset Showcase', 'Position', [100, 100, 1500, 450]);
+figure('Name', sprintf('Vaucottes PANGAEA Dataset Showcase - Acq%02d', acq), 'Position', [100, 100, 1500, 450]);
 
 % --- Plot 1: Drone Trajectory (absolute UTM31N) ---
 subplot(2, 3, 1);
-plot(drone_data.EastingUTM31N_m - mean(drone_data.EastingUTM31N_m), ...
-     drone_data.NorthingUTM31N_m - mean(drone_data.NorthingUTM31N_m), 'r-', 'LineWidth', 2);
+plot(easting - mean(easting), northing - mean(northing), 'r-', 'LineWidth', 2);
 axis equal
 hold on;
-scatter(drone_data.EastingUTM31N_m(1) - mean(drone_data.EastingUTM31N_m), ...
-        drone_data.NorthingUTM31N_m(1) - mean(drone_data.NorthingUTM31N_m), 70, 'b', 'filled');
+scatter(easting(1) - mean(easting), northing(1) - mean(northing), 70, 'b', 'filled');
 title('Drone Trajectory around mean position (UTM 31N, absolute)');
 xlabel('X (m)'); ylabel('Y (m)');
 grid on;
@@ -110,3 +111,10 @@ shading flat; axis equal; colormap(gca, 'parula');
 cb4 = colorbar; cb4.Label.String = 'Signal Strength';
 title(sprintf('Full Radar Snapshot (radar-centered polar)\n%s (Europe/Paris)', to_paris_str(radar_snap_time(1))));
 xlabel('Local X [m]'); ylabel('Local Y [m]');
+
+function f = data_file(exportdir, acq, name)
+% Dataset file of acquisition acq (AccNN_<name>), falling back to the
+% unprefixed name used by the earlier single-acquisition export.
+f = fullfile(exportdir, sprintf('Acq%02d_%s', acq, name));
+if ~isfile(f); f = fullfile(exportdir, name); end
+end

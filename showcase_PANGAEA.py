@@ -1,14 +1,17 @@
 """
 Quick-start visualization for the PANGAEA-formatted Vaucottes dataset
-(PANGAEA_export/*.nc + drone_position.tab). Mirrors the original
+(19 acquisitions, files AccNN_*.nc + AccNN_drone_position.tab). Mirrors the original
 Acquisitions/showcase.py, adapted to the NetCDF/TAB files produced by
 export_pangaea.m. NOT part of the PANGAEA submission itself (PANGAEA does
 not accept code/software as data files) -- local QA/demo only.
+
+Usage: python showcase_PANGAEA.py [acquisition number, 1-19, default 8]
 
 Requires: pip install netCDF4 pandas matplotlib
 On Windows, `pip install tzdata` if ZoneInfo raises ZoneInfoNotFoundError.
 """
 import os
+import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -18,6 +21,14 @@ from netCDF4 import Dataset
 
 PARIS_TZ = ZoneInfo('Europe/Paris')
 EXPORT_DIR = os.path.dirname(os.path.abspath(__file__))
+ACQ = int(sys.argv[1]) if len(sys.argv) > 1 else 8
+
+
+def data_file(name):
+    """Path of a dataset file of acquisition ACQ (AccNN_<name>), falling back to the
+    unprefixed name used by the earlier single-acquisition export."""
+    prefixed = os.path.join(EXPORT_DIR, f'Acq{ACQ:02d}_{name}')
+    return prefixed if os.path.exists(prefixed) else os.path.join(EXPORT_DIR, name)
 
 
 def to_paris_str(unix_time):
@@ -26,12 +37,12 @@ def to_paris_str(unix_time):
 
 
 def main():
-    print("Loading Vaucottes PANGAEA-formatted Dataset...")
+    print(f"Loading Vaucottes PANGAEA-formatted Dataset, acquisition {ACQ}...")
 
     # ==========================================
     # 1. LOAD DRONE TRAJECTORY (TAB-delimited, absolute UTM31N, unchanged)
     # ==========================================
-    drone_df = pd.read_csv(os.path.join(EXPORT_DIR, 'drone_position.tab'), sep='\t')
+    drone_df = pd.read_csv(data_file('drone_position.tab'), sep='\t')
     easting_col = [c for c in drone_df.columns if 'Easting' in c][0]
     northing_col = [c for c in drone_df.columns if 'Northing' in c][0]
     x_mean = drone_df[easting_col].mean()
@@ -52,7 +63,7 @@ def main():
     # intended (time, y, x, ...) order. This mirrors the manual
     # transposition the original showcase.py already needed for the source
     # .mat/HDF5 files; see README_PANGAEA.md for details.
-    with Dataset(os.path.join(EXPORT_DIR, 'lidar_eta_radar_synced.nc')) as ds:
+    with Dataset(data_file('lidar_eta_radar_synced.nc')) as ds:
         eta_time = ds.variables['time'][:]
         eta_x_extended = ds.variables['x_local_ext'][:].transpose()
         eta_y_extended = ds.variables['y_local_ext'][:].transpose()
@@ -64,7 +75,7 @@ def main():
     # ==========================================
     # 3. LOAD RADAR SIGNAL, DRONE-MATCHED (local/radar-centered coords.)
     # ==========================================
-    with Dataset(os.path.join(EXPORT_DIR, 'radar_raw_drone.nc')) as ds:
+    with Dataset(data_file('radar_raw_drone.nc')) as ds:
         time_unix_raw = ds.variables['time'][:]
         padded_x = ds.variables['x_local'][:].transpose()
         padded_y = ds.variables['y_local'][:].transpose()
@@ -80,7 +91,7 @@ def main():
     # ==========================================
     # 4. LOAD FULL RADAR SNAPSHOT (native polar, radar-centered)
     # ==========================================
-    with Dataset(os.path.join(EXPORT_DIR, 'radar_snap.nc')) as ds:
+    with Dataset(data_file('radar_snap.nc')) as ds:
         radar_snap_time = ds.variables['time'][:]
         radar_snap_az = ds.variables['az'][:]
         radar_snap_r = ds.variables['r'][:]
@@ -99,7 +110,7 @@ def main():
     # ==========================================
     print("Generating figures...")
     fig, axes = plt.subplots(2, 3, figsize=(18, 10))
-    fig.canvas.manager.set_window_title('Vaucottes PANGAEA Dataset Showcase')
+    fig.canvas.manager.set_window_title(f'Vaucottes PANGAEA Dataset Showcase - Acq{ACQ:02d}')
 
     # --- Plot 1 (Top Left): Drone Trajectory ---
     ax = axes[0, 0]
